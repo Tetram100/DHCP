@@ -19,33 +19,27 @@ func (o *Options) ToBytes() (bytePacket []byte) {
 	return
 }
 
-func (o *Options) Add(code uint32, value []byte, length uint32) {
-	option := Option{code, uint32(len(value)), value}
+func (o *Options) Add(code uint32, value []byte) {
+
+	var option Option
+
+	if value != nil {
+		option = Option{code, uint32(len(value)), value}
+	} else {
+		option = Option{code, 0, nil}
+	}
+
 	o.options = append(o.options, option)
 }
 
 func (o *Option) ToBytes() (bytePacket []byte) {
 	code := intToBytes(o.code)
-	length := intToBytes(o.length)
-	bytePacket = append(bytePacket, code[0], length[0])
+	bytePacket = append(bytePacket, code[0])
+	if o.length != 0 {
+		length := intToBytes(o.length)
+		bytePacket = append(bytePacket, length[0])
+	}
 	bytePacket = append(bytePacket, o.value[:]...)
 
 	return
 }
-
-/*
-Options à implémenter
-- 53 --> DHCP Type
-- 50
-- 55
-- 1
-- 3
-- 51
-- 54
-- 6
-
-
-
-
-
-*/
