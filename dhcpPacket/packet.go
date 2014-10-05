@@ -29,9 +29,6 @@ type Flags struct {
 	broadcast bool
 }
 
-type Options struct {
-}
-
 // Returns the byte array forming the packet
 func (d dhcpPacket) ToBytes() (bytePacket []byte) {
 	bytePacket = append(bytePacket, d.op, d.htype, d.hlen, d.hops)
@@ -78,12 +75,7 @@ func (d *dhcpPacket) SetOp(value int) {
 }
 
 func (d *dhcpPacket) SetXid(value uint32) {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.LittleEndian, value)
-	if err != nil {
-		fmt.Println("binary.Write failed:", err)
-	}
-	copy(d.xid[:], buf.Bytes())
+	copy(d.xid[:], intToBytes(value))
 }
 
 func (d *dhcpPacket) SetCiaddr(value string) {
@@ -126,6 +118,15 @@ func (f *Flags) SetBroadcast(value bool) {
 	f.broadcast = value
 }
 
-func (o *Options) ToBytes() (bytePacket [10]byte) {
-	return
+// Helpers
+
+func intToBytes(value uint32) (output []byte) {
+
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.LittleEndian, value)
+	if err != nil {
+		fmt.Println("binary.Write failed:", err)
+	}
+
+	return buf.Bytes()
 }
