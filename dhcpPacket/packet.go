@@ -45,7 +45,12 @@ func (d dhcpPacket) ToBytes() (bytePacket []byte) {
 	bytePacket = append(bytePacket, d.yiaddr[:]...)
 	bytePacket = append(bytePacket, d.siaddr[:]...)
 	bytePacket = append(bytePacket, d.giaddr[:]...)
+	bytePacket = append(bytePacket, d.chaddr[:]...)
+	bytePacket = append(bytePacket, d.sname[:]...)
 	bytePacket = append(bytePacket, d.file[:]...)
+
+	magic := [...]byte{0x63, 0x82, 0x53, 0x63}
+	bytePacket = append(bytePacket, magic[:]...)
 
 	optionsBytes := d.Options.ToBytes()
 	bytePacket = append(bytePacket, optionsBytes[:]...)
@@ -97,6 +102,14 @@ func (d *dhcpPacket) SetSiaddr(value string) {
 func (d *dhcpPacket) SetGiaddr(value string) {
 	tmp := net.ParseIP(value)
 	copy(d.giaddr[:], tmp[12:])
+}
+
+func (d *dhcpPacket) SetChaddr(value string) {
+	tmp, err := net.ParseMAC(value)
+	if err != nil {
+		fmt.Println("Error whild parsing MAC")
+	}
+	copy(d.chaddr[:], tmp)
 }
 
 func (f *Flags) ToBytes() (bytePacket [2]byte) {
