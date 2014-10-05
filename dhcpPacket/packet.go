@@ -1,8 +1,10 @@
 package dhcpPacket
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
+	"net"
 )
 
 type dhcpPacket struct {
@@ -43,8 +45,6 @@ func (d dhcpPacket) ToBytes() (bytePacket []byte) {
 	bytePacket = append(bytePacket, d.yiaddr[:]...)
 	bytePacket = append(bytePacket, d.siaddr[:]...)
 	bytePacket = append(bytePacket, d.giaddr[:]...)
-	bytePacket = append(bytePacket, d.chaddr[:]...)
-	bytePacket = append(bytePacket, d.sname[:]...)
 	bytePacket = append(bytePacket, d.file[:]...)
 
 	optionsBytes := d.Options.ToBytes()
@@ -73,9 +73,30 @@ func (d *dhcpPacket) SetOp(value int) {
 }
 
 func (d *dhcpPacket) SetXid(value uint32) {
-	tmp := make([]byte, 4)
-	binary.BigEndian.PutUint32(tmp, value)
-	copy(d.xid[:], tmp)
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.LittleEndian, value)
+	if err != nil {
+		fmt.Println("binary.Write failed:", err)
+	}
+	copy(d.xid[:], buf.Bytes())
+}
+
+func (d *dhcpPacket) SetCiaddr(value string) {
+	tmp := net.ParseIP(value)
+	copy(d.ciaddr[:], tmp[12:])
+}
+
+func (d *dhcpPacket) SetYiaddr(value string) {
+	tmp := net.ParseIP(value)
+	copy(d.yiaddr[:], tmp[12:])
+}
+func (d *dhcpPacket) SetSiaddr(value string) {
+	tmp := net.ParseIP(value)
+	copy(d.siaddr[:], tmp[12:])
+}
+func (d *dhcpPacket) SetGiaddr(value string) {
+	tmp := net.ParseIP(value)
+	copy(d.giaddr[:], tmp[12:])
 }
 
 func (f *Flags) ToBytes() (bytePacket [2]byte) {
@@ -85,7 +106,7 @@ func (f *Flags) ToBytes() (bytePacket [2]byte) {
 		bytePacket = [2]byte{0x80, 0x00}
 	}
 
-	return [2]byte{0x80, 0x00}
+	return [2]byte{0x00, 0xff}
 }
 
 func (f *Flags) SetBroadcast(value bool) {
