@@ -14,7 +14,7 @@ type dhcpPacket struct {
 	hops    byte
 	xid     [4]byte
 	secs    [2]byte
-	Flags   Flags
+	flags   Flags
 	ciaddr  [4]byte
 	yiaddr  [4]byte
 	siaddr  [4]byte
@@ -35,7 +35,7 @@ func (d dhcpPacket) ToBytes() (bytePacket []byte) {
 	bytePacket = append(bytePacket, d.xid[:]...)
 	bytePacket = append(bytePacket, d.secs[:]...)
 
-	flagsBytes := d.Flags.ToBytes()
+	flagsBytes := d.flags.ToBytes()
 	bytePacket = append(bytePacket, flagsBytes[:]...)
 
 	bytePacket = append(bytePacket, d.ciaddr[:]...)
@@ -104,6 +104,10 @@ func (d *dhcpPacket) SetChaddr(value string) {
 	copy(d.chaddr[:], tmp)
 }
 
+func (d *dhcpPacket) SetBroadcast(value bool) {
+	d.flags.SetBroadcast(value)
+}
+
 func (f *Flags) ToBytes() (bytePacket [2]byte) {
 
 	if f.broadcast {
@@ -116,6 +120,36 @@ func (f *Flags) ToBytes() (bytePacket [2]byte) {
 
 func (f *Flags) SetBroadcast(value bool) {
 	f.broadcast = value
+}
+
+func parseDhcpPacket(b []byte, o *dhcpPacket) (err error) {
+
+	o.op = b[0]
+	o.htype = b[1]
+	o.hlen = b[2]
+	o.hops = b[3]
+	copy(o.xid[:], b[4:7])
+	copy(o.secs[:], b[8:9])
+	o.flags = parseFlags(b[10:11])
+	copy(o.ciaddr[:], b[12:15])
+	copy(o.yiaddr[:], b[16:19])
+	copy(o.siaddr[:], b[20:23])
+	copy(o.giaddr[:], b[24:27])
+	copy(o.chaddr[:], b[28:43])
+	copy(o.sname[:], b[44:107])
+	copy(o.file[:], b[108:237])
+	o.Options = parseOptions(b[238:])
+
+	return
+
+}
+
+func parseFlags(f []byte) (o Flags) {
+	if f[0] == byte(0x80) {
+		o.SetBroadcast(true)
+	}
+
+	return
 }
 
 // Helpers

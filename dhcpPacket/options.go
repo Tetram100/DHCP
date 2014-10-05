@@ -43,3 +43,7 @@ func (o *Option) ToBytes() (bytePacket []byte) {
 
 	return
 }
+
+func parseOptions(i []byte) (o Options) {
+	return
+}
