@@ -74,6 +74,19 @@ func (d *dhcpPacket) SetOp(value int) {
 	}
 }
 
+func (d *dhcpPacket) GetOp() (value int) {
+	if d.op == 0x01 {
+		return 1
+	} else {
+		return 2
+	}
+}
+
+func (d *dhcpPacket) GetXid() (value uint32) {
+	value = binary.LittleEndian.Uint32(d.xid[:])
+	return
+}
+
 func (d *dhcpPacket) SetXid(value uint32) {
 	copy(d.xid[:], intToBytes(value))
 }
@@ -102,6 +115,11 @@ func (d *dhcpPacket) SetChaddr(value string) {
 		fmt.Println("Error whild parsing MAC")
 	}
 	copy(d.chaddr[:], tmp)
+}
+
+func (d *dhcpPacket) GetChaddr() (address net.HardwareAddr) {
+	address = d.chaddr[:]
+	return
 }
 
 func (d *dhcpPacket) SetBroadcast(value bool) {
