@@ -113,16 +113,17 @@ func (f *Flags) ToBytes() (bytePacket [2]byte) {
 	if f.broadcast {
 		fmt.Println("Test")
 		bytePacket = [2]byte{0x80, 0x00}
+		return
 	}
 
-	return [2]byte{0x00, 0xff}
+	return [2]byte{0x00, 0x00}
 }
 
 func (f *Flags) SetBroadcast(value bool) {
 	f.broadcast = value
 }
 
-func parseDhcpPacket(b []byte, o *dhcpPacket) (err error) {
+func ParseDhcpPacket(b []byte, o *dhcpPacket) (err error) {
 
 	o.op = b[0]
 	o.htype = b[1]
