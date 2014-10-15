@@ -1,5 +1,12 @@
 package dhcpPacket
 
+import (
+	"bytes"
+	"encoding/binary"
+	"errors"
+	"fmt"
+)
+
 type Options struct {
 	options []Option
 }
@@ -45,5 +52,63 @@ func (o *Option) ToBytes() (bytePacket []byte) {
 }
 
 func parseOptions(i []byte) (o Options) {
+
+	buf := bytes.NewBuffer(i)
+
+	for {
+		err := o.parseAdd(buf)
+		if err != nil {
+			if err.Error() != "End" {
+				fmt.Println(err)
+			}
+			break
+		}
+	}
+
 	return
+}
+
+func (o *Options) parseAdd(buf *bytes.Buffer) (err error) {
+	var n int
+
+	codeRaw := make([]byte, 1)
+	lengthRaw := make([]byte, 1)
+
+	n, err = buf.Read(codeRaw)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if n == 0 || codeRaw[0] == byte(0xff) {
+		return errors.New("End")
+	}
+
+	n, err = buf.Read(lengthRaw)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if n == 0 {
+		return errors.New("End")
+	}
+
+	// On rajoute des zéros pour parse en uint16
+	codeRaw = append(codeRaw, byte(0x00))
+	lengthRaw = append(lengthRaw, byte(0x00))
+
+	code := binary.LittleEndian.Uint16(codeRaw)
+	length := binary.LittleEndian.Uint16(lengthRaw)
+
+	data := make([]byte, length)
+	n, err = buf.Read(data)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if n != int(length) {
+		return errors.New("Truncated Data")
+	}
+
+	fmt.Println(len(data))
+
+	o.Add(uint32(code), data[:])
+	return
+
 }

@@ -3,6 +3,7 @@ package dhcpPacket
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 )
@@ -143,21 +144,35 @@ func (f *Flags) SetBroadcast(value bool) {
 
 func ParseDhcpPacket(b []byte, o *dhcpPacket) (err error) {
 
+	if len(b) < 237 {
+		return errors.New("Mauvais packet")
+	}
+
+	magic := [...]byte{0x63, 0x82, 0x53, 0x63}
+	parsedMagic := [4]byte{}
+	copy(parsedMagic[:], b[236:240])
+
+	if parsedMagic != magic {
+		return errors.New("Mauvais Magic Cookie")
+	}
+
 	o.op = b[0]
 	o.htype = b[1]
 	o.hlen = b[2]
 	o.hops = b[3]
-	copy(o.xid[:], b[4:7])
-	copy(o.secs[:], b[8:9])
-	o.flags = parseFlags(b[10:11])
-	copy(o.ciaddr[:], b[12:15])
-	copy(o.yiaddr[:], b[16:19])
-	copy(o.siaddr[:], b[20:23])
-	copy(o.giaddr[:], b[24:27])
-	copy(o.chaddr[:], b[28:43])
-	copy(o.sname[:], b[44:107])
-	copy(o.file[:], b[108:237])
-	o.Options = parseOptions(b[238:])
+	copy(o.xid[:], b[4:8])
+	copy(o.secs[:], b[8:10])
+	o.flags = parseFlags(b[10:12])
+	copy(o.ciaddr[:], b[12:16])
+	copy(o.yiaddr[:], b[16:20])
+	copy(o.siaddr[:], b[20:24])
+	copy(o.giaddr[:], b[24:28])
+	copy(o.chaddr[:], b[28:44])
+	copy(o.sname[:], b[44:108])
+	copy(o.file[:], b[108:236])
+
+	// On saute le magic Cookie
+	o.Options = parseOptions(b[240:])
 
 	return
 
