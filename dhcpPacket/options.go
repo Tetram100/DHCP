@@ -106,9 +106,21 @@ func (o *Options) parseAdd(buf *bytes.Buffer) (err error) {
 		return errors.New("Truncated Data")
 	}
 
-	fmt.Println(len(data))
-
 	o.Add(uint32(code), data[:])
+	return
+
+}
+
+func (o *Options) GetOption(code uint32) (value []byte, err error) {
+
+	for _, option := range o.options {
+		if option.code == code {
+			value = option.value
+			return
+		}
+	}
+
+	err = errors.New("Option not found")
 	return
 
 }

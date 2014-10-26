@@ -130,7 +130,6 @@ func (d *dhcpPacket) SetBroadcast(value bool) {
 func (f *Flags) ToBytes() (bytePacket [2]byte) {
 
 	if f.broadcast {
-		fmt.Println("Test")
 		bytePacket = [2]byte{0x80, 0x00}
 		return
 	}
@@ -178,6 +177,71 @@ func ParseDhcpPacket(b []byte, o *dhcpPacket) (err error) {
 
 }
 
+func (d *dhcpPacket) GetMessageType() (msgType int) {
+	value, err := d.Options.GetOption(53)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	msgType = byteToInt(value)
+
+	return
+}
+
+func (d *dhcpPacket) GetRequestedIp() (ip net.IP) {
+	value, err := d.Options.GetOption(50)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	ip = net.IP(value)
+	return
+}
+
+func (d *dhcpPacket) GetHostName() (hostname string) {
+	value, err := d.Options.GetOption(12)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	hostname = string(value)
+	return
+}
+
+func (d *dhcpPacket) GetMaximumPacketSize() (size int) {
+	value, err := d.Options.GetOption(57)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	size = int(binary.BigEndian.Uint16(value))
+	return
+}
+
+func (d *dhcpPacket) GetParameterRequestList() (list []int) {
+	value, err := d.Options.GetOption(55)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	buf := bytes.NewBuffer(value)
+
+	for i := 0; i < len(value); i++ {
+		codeRaw := make([]byte, 1)
+
+		n, err := buf.Read(codeRaw)
+		if err != nil {
+			fmt.Println(err)
+		}
+		if n == 0 {
+			fmt.Println("Unexpected End")
+		}
+		list = append(list, byteToInt(codeRaw))
+	}
+
+	return
+}
+
 func parseFlags(f []byte) (o Flags) {
 	if f[0] == byte(0x80) {
 		o.SetBroadcast(true)
@@ -197,4 +261,9 @@ func intToBytes(value uint32) (output []byte) {
 	}
 
 	return buf.Bytes()
+}
+
+func byteToInt(value []byte) (output int) {
+	value = append(value, byte(0x00))
+	return int(binary.LittleEndian.Uint16(value))
 }
