@@ -1,34 +1,42 @@
 package main
 
 import (
-	"encoding/hex"
+	"database/sql"
 	"fmt"
 	"git.cfr.re/dhcp.git/dhcpPacket"
-	//	"git.cfr.re/dhcp.git/dhcpUDP"
-	"github.com/mattn/go-sqlite3"
-	"net"
+	"git.cfr.re/dhcp.git/dhcpUDP"
+	_ "github.com/mattn/go-sqlite3"
+	"log"
 )
 
-var DB_DRIVER string
-sql.Register(DB_DRIVER, &sqlite3.SQLiteDriver{})
-database, err := sql.Open(DB_DRIVER, "mysqlite_3")
+var database *sql.DB
 
-tx, err := database.Begin()
-result, err := database.Exec(
- "CREATE TABLE IF NOT EXISTS IP_table ( id integer PRIMARY KEY, AddressIP varchar(255) NOT NULL, F",)
+func initDB() {
+	database, err := sql.Open("sqlite3", "mysqlite_3")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer database.Close()
 
-if err != nil {
- fmt.Println("Failed to create the database")
+	tx, err := database.Begin()
+	_, err = database.Exec(
+		"CREATE TABLE IF NOT EXISTS IP_table ( id integer PRIMARY KEY, AddressIP varchar(255) NOT NULL)")
+
+	if err != nil {
+		fmt.Println("Failed to create the database")
+		log.Fatal(err)
+	}
+
+	tx.Commit()
 }
 
-tx.Commit()
-
 func main() {
+
+	initDB()
 
 	handler := func(data []byte) {
 		pkg := dhcpPacket.NewDhcpPacket()
 		dhcpPacket.ParseDhcpPacket(data, pkg)
-		if 
 	}
 
 	dhcpUDP.InitListener(handler)
