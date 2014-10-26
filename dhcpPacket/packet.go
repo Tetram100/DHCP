@@ -177,6 +177,51 @@ func ParseDhcpPacket(b []byte, o *dhcpPacket) (err error) {
 
 }
 
+// Non testé
+func (d *dhcpPacket) SetMessageType(value int) {
+
+	valueRaw := intToBytes(uint32(value))
+	tmp := valueRaw[3]
+	d.Options.Add(53, []byte{tmp})
+}
+
+// Non testé
+func (d *dhcpPacket) SetSubnetMask(value string) {
+	tmp := net.ParseIP(value)
+	d.Options.Add(1, tmp[12:])
+}
+
+// Non testé
+func (d *dhcpPacket) SetRouter(value string) {
+	tmp := net.ParseIP(value)
+	d.Options.Add(3, tmp[12:])
+}
+
+// Non testé
+func (d *dhcpPacket) SetDhcpServer(value string) {
+	tmp := net.ParseIP(value)
+	d.Options.Add(54, tmp[12:])
+}
+
+// Non testé
+func (d *dhcpPacket) SetDnsServer(value []string) {
+
+	var raw []byte
+
+	for _, addr := range value {
+		tmp := net.ParseIP(addr)
+		raw = append(raw, []byte(tmp[12:])...)
+	}
+
+	d.Options.Add(6, raw)
+}
+
+// Non testé
+func (d *dhcpPacket) SetLeaseTime(value int) {
+	tmp := intToBytes(uint32(value))
+	d.Options.Add(51, tmp[12:])
+}
+
 func (d *dhcpPacket) GetMessageType() (msgType int) {
 	value, err := d.Options.GetOption(53)
 	if err != nil {
