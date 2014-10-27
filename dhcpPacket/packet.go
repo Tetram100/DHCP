@@ -8,7 +8,7 @@ import (
 	"net"
 )
 
-type dhcpPacket struct {
+type DhcpPacket struct {
 	op      byte
 	htype   byte
 	hlen    byte
@@ -31,7 +31,7 @@ type Flags struct {
 }
 
 // Returns the byte array forming the packet
-func (d dhcpPacket) ToBytes() (bytePacket []byte) {
+func (d DhcpPacket) ToBytes() (bytePacket []byte) {
 	bytePacket = append(bytePacket, d.op, d.htype, d.hlen, d.hops)
 	bytePacket = append(bytePacket, d.xid[:]...)
 	bytePacket = append(bytePacket, d.secs[:]...)
@@ -56,9 +56,9 @@ func (d dhcpPacket) ToBytes() (bytePacket []byte) {
 	return
 }
 
-func NewDhcpPacket() (d *dhcpPacket) {
+func NewDhcpPacket() (d *DhcpPacket) {
 
-	d = new(dhcpPacket)
+	d = new(DhcpPacket)
 	d.htype = 0x01
 	d.hlen = 0x06
 	d.hops = 0x00
@@ -67,7 +67,7 @@ func NewDhcpPacket() (d *dhcpPacket) {
 
 }
 
-func (d *dhcpPacket) SetOp(value int) {
+func (d *DhcpPacket) SetOp(value int) {
 	if value == 1 {
 		d.op = 0x01
 	} else {
@@ -75,7 +75,7 @@ func (d *dhcpPacket) SetOp(value int) {
 	}
 }
 
-func (d *dhcpPacket) GetOp() (value int) {
+func (d *DhcpPacket) GetOp() (value int) {
 	if d.op == 0x01 {
 		return 1
 	} else {
@@ -83,47 +83,43 @@ func (d *dhcpPacket) GetOp() (value int) {
 	}
 }
 
-func (d *dhcpPacket) GetXid() (value uint32) {
+func (d *DhcpPacket) GetXid() (value uint32) {
 	value = binary.LittleEndian.Uint32(d.xid[:])
 	return
 }
 
-func (d *dhcpPacket) SetXid(value uint32) {
+func (d *DhcpPacket) SetXid(value uint32) {
 	copy(d.xid[:], intToBytes(value))
 }
 
-func (d *dhcpPacket) SetCiaddr(value string) {
+func (d *DhcpPacket) SetCiaddr(value string) {
 	tmp := net.ParseIP(value)
 	copy(d.ciaddr[:], tmp[12:])
 }
 
-func (d *dhcpPacket) SetYiaddr(value string) {
+func (d *DhcpPacket) SetYiaddr(value string) {
 	tmp := net.ParseIP(value)
 	copy(d.yiaddr[:], tmp[12:])
 }
-func (d *dhcpPacket) SetSiaddr(value string) {
+func (d *DhcpPacket) SetSiaddr(value string) {
 	tmp := net.ParseIP(value)
 	copy(d.siaddr[:], tmp[12:])
 }
-func (d *dhcpPacket) SetGiaddr(value string) {
+func (d *DhcpPacket) SetGiaddr(value string) {
 	tmp := net.ParseIP(value)
 	copy(d.giaddr[:], tmp[12:])
 }
 
-func (d *dhcpPacket) SetChaddr(value string) {
-	tmp, err := net.ParseMAC(value)
-	if err != nil {
-		fmt.Println("Error whild parsing MAC")
-	}
-	copy(d.chaddr[:], tmp)
+func (d *DhcpPacket) SetChaddr(value net.HardwareAddr) {
+	copy(d.chaddr[:], value)
 }
 
-func (d *dhcpPacket) GetChaddr() (address net.HardwareAddr) {
+func (d *DhcpPacket) GetChaddr() (address net.HardwareAddr) {
 	address = d.chaddr[:]
 	return
 }
 
-func (d *dhcpPacket) SetBroadcast(value bool) {
+func (d *DhcpPacket) SetBroadcast(value bool) {
 	d.flags.SetBroadcast(value)
 }
 
@@ -141,7 +137,7 @@ func (f *Flags) SetBroadcast(value bool) {
 	f.broadcast = value
 }
 
-func ParseDhcpPacket(b []byte, o *dhcpPacket) (err error) {
+func ParseDhcpPacket(b []byte, o *DhcpPacket) (err error) {
 
 	if len(b) < 237 {
 		return errors.New("Mauvais packet")
@@ -178,33 +174,33 @@ func ParseDhcpPacket(b []byte, o *dhcpPacket) (err error) {
 }
 
 // Non testé
-func (d *dhcpPacket) SetMessageType(value int) {
+func (d *DhcpPacket) SetMessageType(value int) {
 
 	valueRaw := intToBytes(uint32(value))
-	tmp := valueRaw[3]
+	tmp := valueRaw[0]
 	d.Options.Add(53, []byte{tmp})
 }
 
 // Non testé
-func (d *dhcpPacket) SetSubnetMask(value string) {
+func (d *DhcpPacket) SetSubnetMask(value string) {
 	tmp := net.ParseIP(value)
 	d.Options.Add(1, tmp[12:])
 }
 
 // Non testé
-func (d *dhcpPacket) SetRouter(value string) {
+func (d *DhcpPacket) SetRouter(value string) {
 	tmp := net.ParseIP(value)
 	d.Options.Add(3, tmp[12:])
 }
 
 // Non testé
-func (d *dhcpPacket) SetDhcpServer(value string) {
+func (d *DhcpPacket) SetDhcpServer(value string) {
 	tmp := net.ParseIP(value)
 	d.Options.Add(54, tmp[12:])
 }
 
 // Non testé
-func (d *dhcpPacket) SetDnsServer(value []string) {
+func (d *DhcpPacket) SetDnsServer(value []string) {
 
 	var raw []byte
 
@@ -217,12 +213,12 @@ func (d *dhcpPacket) SetDnsServer(value []string) {
 }
 
 // Non testé
-func (d *dhcpPacket) SetLeaseTime(value int) {
-	tmp := intToBytes(uint32(value))
-	d.Options.Add(51, tmp[12:])
+func (d *DhcpPacket) SetLeaseTime(value int) {
+	tmp := intToBytesBG(uint32(value))
+	d.Options.Add(51, tmp)
 }
 
-func (d *dhcpPacket) GetMessageType() (msgType int) {
+func (d *DhcpPacket) GetMessageType() (msgType int) {
 	value, err := d.Options.GetOption(53)
 	if err != nil {
 		fmt.Println(err)
@@ -233,7 +229,7 @@ func (d *dhcpPacket) GetMessageType() (msgType int) {
 	return
 }
 
-func (d *dhcpPacket) GetRequestedIp() (ip net.IP) {
+func (d *DhcpPacket) GetRequestedIp() (ip net.IP) {
 	value, err := d.Options.GetOption(50)
 	if err != nil {
 		fmt.Println(err)
@@ -243,7 +239,7 @@ func (d *dhcpPacket) GetRequestedIp() (ip net.IP) {
 	return
 }
 
-func (d *dhcpPacket) GetHostName() (hostname string) {
+func (d *DhcpPacket) GetHostName() (hostname string) {
 	value, err := d.Options.GetOption(12)
 	if err != nil {
 		fmt.Println(err)
@@ -253,7 +249,7 @@ func (d *dhcpPacket) GetHostName() (hostname string) {
 	return
 }
 
-func (d *dhcpPacket) GetMaximumPacketSize() (size int) {
+func (d *DhcpPacket) GetMaximumPacketSize() (size int) {
 	value, err := d.Options.GetOption(57)
 	if err != nil {
 		fmt.Println(err)
@@ -263,7 +259,7 @@ func (d *dhcpPacket) GetMaximumPacketSize() (size int) {
 	return
 }
 
-func (d *dhcpPacket) GetParameterRequestList() (list []int) {
+func (d *DhcpPacket) GetParameterRequestList() (list []int) {
 	value, err := d.Options.GetOption(55)
 	if err != nil {
 		fmt.Println(err)
@@ -301,6 +297,17 @@ func intToBytes(value uint32) (output []byte) {
 
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.LittleEndian, value)
+	if err != nil {
+		fmt.Println("binary.Write failed:", err)
+	}
+
+	return buf.Bytes()
+}
+
+func intToBytesBG(value uint32) (output []byte) {
+
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, value)
 	if err != nil {
 		fmt.Println("binary.Write failed:", err)
 	}
