@@ -10,6 +10,7 @@ import (
 )
 
 var database *sql.DB
+ip_server := ""
 
 func initDB() {
 	database, err := sql.Open("sqlite3", "mysqlite_3")
@@ -30,6 +31,34 @@ func initDB() {
 	tx.Commit()
 }
 
+func response(discover dhcpPacket) {
+	packet_response := dhcpPacket.NewDhcpPacket()
+	packet_response.dhcpPacket.SetOp(2)
+	packet_response.dhcpPacket.SetXid(discover.dhcpPacket.GetXid())
+	packet_response.dhcpPacket.SetCiaddr("0.0.0.0")
+	mac_disover = discover.dhcpPacket.GetChaddr()
+	packet_response.dhcpPacket.SetChaddr(mac_disover)
+
+	rows1, err := database.QueryRow("SELECT * FROM IP_table WHERE MAC = ?", (mac_disover,))
+	rows2, err := database.QueryRow("SELECT * FROM IP_table WHERE MAC = ?", ("",))
+	rows2, err := database.QueryRow("SELECT * FROM IP_table WHERE ( julianday('now') - julianday(allocated_at) > 3600)")
+	if rows1 != nil {
+		packet_response.dhcpPacket.SetYiaddr(rows1[1])
+		// mettre à jour allocated_at
+	} else if rows2 !=nil {
+		packet_response.dhcpPacket.SetYiaddr(rows2[1])
+		// mettre à jour allocated_at
+	} else if rows3 !=nil {
+		packet_response.dhcpPacket.SetYiaddr(rows3[1])
+		// mettre à jour allocated_at
+	} else {
+		fmt.Println("All IPs are used")
+	}
+
+	packet_response.dhcpPacket.SetSiaddr(ip_server)
+
+}
+
 func main() {
 
 	initDB()
@@ -37,6 +66,9 @@ func main() {
 	handler := func(data []byte) {
 		pkg := dhcpPacket.NewDhcpPacket()
 		dhcpPacket.ParseDhcpPacket(data, pkg)
+		if option == {
+			response(pkg)
+		}
 	}
 
 	dhcpUDP.InitListener(handler)
