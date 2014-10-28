@@ -5,25 +5,33 @@ import (
 	"fmt"
 	"git.cfr.re/dhcp.git/dhcpPacket"
 	"git.cfr.re/dhcp.git/dhcpUDP"
-	"github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"net"
 )
 
 var database *sql.DB
-var allocation_time int = 3600 // must be in second
+var allocation_time int = 3600            // must be in second
 var Our_Network string = "192.168.1.0/24" // With CIDR notation
 var IP_server string = "192.168.1.1"
 
+type sqlRow struct {
+	Id           int
+	IP           string
+	MAC          string
+	Release_date int
+}
+
 func create_ip(Network_cidr string) (list []string) {
-	list := []string{}
 	ip, ipnet, err := net.ParseCIDR(Network_cidr)
 	if err != nil {
 		log.Fatal(err)
 	}
 	for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
-		list = Append(list, ip)
+		list = append(list, ip.String())
 	}
+
+	return
 }
 
 func inc(ip net.IP) {
@@ -47,7 +55,7 @@ func initDB() {
 		"CREATE TABLE IF NOT EXISTS IP_table ( id integer PRIMARY KEY, AddressIP varchar(255) NOT NULL, MAC varchar(255), release_date TIMESTAMP DEFAULT NOW())")
 
 	IPs := create_ip(Our_Network)
-	for ip := IPs.Front(); ip != nil; ip = ip.Next() {
+	for _, ip := range IPs {
 		if ip != IP_server {
 			_, err = database.Exec(
 				"INSERT INTO IP_table (id, AddressIP, MAC, release_date) VALUES (?, ?, ?, ?)", nil, ip, "", nil)
@@ -63,6 +71,8 @@ func initDB() {
 }
 
 func response(request *dhcpPacket.DhcpPacket) {
+
+	var err error
 
 	packet_response := dhcpPacket.NewDhcpPacket()
 
@@ -86,23 +96,40 @@ func response(request *dhcpPacket.DhcpPacket) {
 	mac_request := request.GetChaddr()
 	packet_response.SetChaddr(mac_request)
 
-	tx, err := database.Begin()
-	rows1, err := database.QueryRow("SELECT * FROM IP_table WHERE MAC = ?", mac_request)
-	rows2, err := database.QueryRow("SELECT * FROM IP_table WHERE MAC = ?", "")
-	rows2, err := database.QueryRow("SELECT * FROM IP_table WHERE ( NOW() > release_date )")
+	var row1 sqlRow
+	err1 := database.QueryRow("SELECT * FROM IP_table WHERE MAC = ?", mac_request).Scan(&row1.Id, &row1.IP, &row1.MAC, &row1.Release_date)
+	if err1 != nil {
+		fmt.Println("Erreur lors de la requête 1")
+		fmt.Println(err1)
+	}
+
+	var row2 sqlRow
+	err2 := database.QueryRow("SELECT AddressIP FROM IP_table WHERE MAC = ?", "").Scan(&row2.Id, &row2.IP, &row2.MAC, &row2.Release_date)
+	if err2 != nil {
+		fmt.Println("Erreur lors de la requête 2")
+		fmt.Println(err2)
+	}
+
+	var row3 sqlRow
+	err3 := database.QueryRow("SELECT * FROM IP_table WHERE ( NOW() > release_date )").Scan(&row3.Id, &row3.IP, &row3.MAC, &row3.Release_date)
+	if err3 != nil {
+		fmt.Println("Erreur lors de la requête 3")
+		fmt.Println(err3)
+	}
+
 	// We allocate the IP for 3 minutes to give the time to receive a dhcp request
-	if rows1 != nil {
-		packet_response.SetYiaddr(rows1[1])
+	if err1 == nil {
+		packet_response.SetYiaddr(row1.IP)
 		_, err = database.Exec(
-			"UPDATE IP_table SET release_date=(NOW()+180) WHERE id = ?", rows1[0])
-	} else if rows2 !=nil {
-		packet_response.SetYiaddr(rows2[1])
+			"UPDATE IP_table SET release_date=(NOW()+180) WHERE id = ?", row1.Id)
+	} else if err2 == nil {
+		packet_response.SetYiaddr(row2.IP)
 		_, err = database.Exec(
-			"UPDATE IP_table SET release_date=(NOW()+180), MAC = ? WHERE id = ?", (mac_request, rows2[0]))
-	} else if rows3 !=nil {
-		packet_response.SetYiaddr(rows3[1])
+			"UPDATE IP_table SET release_date=(NOW()+180), MAC = ? WHERE id = ?", mac_request, row2.Id)
+	} else if err3 == nil {
+		packet_response.SetYiaddr(row3.IP)
 		_, err = database.Exec(
-			"UPDATE IP_table SET release_date=(NOW()+180), MAC = ? WHERE id = ?", (mac_request, rows3[0]))
+			"UPDATE IP_table SET release_date=(NOW()+180), MAC = ? WHERE id = ?", mac_request, row3.Id)
 	} else {
 		fmt.Println("All IPs are used")
 	}
@@ -110,7 +137,6 @@ func response(request *dhcpPacket.DhcpPacket) {
 		fmt.Println("Failed to check the database")
 		log.Fatal(err)
 	}
-	tx.Commit()
 	packet_response.Options.Add(255, nil)
 
 	// DEBUG ---
@@ -157,24 +183,28 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 
 	// Réponse particulières à la demande du client
 	packet_response.SetXid(discover.GetXid())
-	mac_discover := discover.GetChaddr()
-	packet_response.SetChaddr(mac_discover)
+	mac_request := discover.GetChaddr()
+	packet_response.SetChaddr(mac_request)
 
-	tx, err := database.Begin()
-	rows1, err := database.QueryRow("SELECT * FROM IP_table WHERE MAC = ?", mac_request)
-	// We allocate the IP for allocation_time
-	if rows1 != nil {
-		packet_response.SetYiaddr(rows1[1])
-		_, err = database.Exec(
-			"UPDATE IP_table SET release_date=(NOW() + ?) WHERE id = ?", (allocation_time, rows1[0]))
-	} else {
-		fmt.Println("He has wait too long and needs a dhcp discover")
-	}
+	var row sqlRow
+
+	err := database.QueryRow("SELECT * FROM IP_table WHERE MAC = ?", mac_request).Scan(&row.Id, &row.IP, &row.MAC, &row.Release_date)
 	if err != nil {
-		fmt.Println("Failed to check the database")
-		log.Fatal(err)
+
+		if err == sql.ErrNoRows {
+			fmt.Println("He has wait too long and needs a dhcp discover")
+		} else {
+			fmt.Println("Failed to check the database")
+			fmt.Println(err)
+		}
+
 	}
-	tx.Commit()
+
+	// We allocate the IP for allocation_time
+	packet_response.SetYiaddr(row.IP)
+	_, err = database.Exec(
+		"UPDATE IP_table SET release_date=(NOW() + ?) WHERE id = ?", allocation_time, row.Id)
+
 	packet_response.Options.Add(255, nil)
 
 	// DEBUG ---
