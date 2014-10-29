@@ -84,7 +84,6 @@ func response(request *dhcpPacket.DhcpPacket) {
 
 	// Partie fixe dans les options
 	// TODO - Récupérer à partir de la conf
-	packet_response.SetMessageType(2)
 	packet_response.SetDhcpServer(parameters.IP_server)
 	packet_response.SetLeaseTime(parameters.Allocation_time)
 	packet_response.SetSubnetMask("255.255.255.0")
@@ -156,6 +155,8 @@ func response(request *dhcpPacket.DhcpPacket) {
 		fmt.Println("Failed to check the database")
 		log.Fatal(err)
 	}
+
+	packet_response.SetMessageType(2)
 	packet_response.Options.Add(255, nil)
 
 	// DEBUG ---
@@ -197,7 +198,6 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 
 	// Partie fixe dans les options
 	// TODO - Récupérer à partir de la conf
-	packet_response.SetMessageType(5)
 	packet_response.SetDhcpServer(parameters.IP_server)
 	packet_response.SetLeaseTime(parameters.Allocation_time)
 	packet_response.SetSubnetMask("255.255.255.0")
@@ -230,6 +230,7 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 
 	} else {
 		// We allocate the IP for allocation_time
+		packet_response.SetMessageType(5)
 		packet_response.SetYiaddr(row.IP)
 
 		timeModifier := "+" + strconv.Itoa(parameters.Allocation_time) + " seconds"
