@@ -11,6 +11,7 @@ type Parameters struct {
 	Our_Network     string `json:"ourNetwork"`     // In CIDR notation
 	IP_server       string `json:"ipServer"`
 	IP_DNS          string `json:"ipDns"`
+	Netmask         string `json:"netmask"`
 }
 
 var parameters Parameters
