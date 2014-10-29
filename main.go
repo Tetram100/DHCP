@@ -177,7 +177,7 @@ func response(request *dhcpPacket.DhcpPacket) {
 		fmt.Println(err)
 	}
 
-	if packet_response.GetMessageType() == 5 {
+	if packet_response.GetMessageType() == 2 {
 		fmt.Println("OFFER Sent - Bytes written : ", n)
 	} else {
 		fmt.Println("NACK Sent - Bytes written : ", n)
@@ -249,7 +249,13 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 
 	// Envoi du packet
 
-	raddr := net.UDPAddr{IP: net.ParseIP("255.255.255.255"), Port: 68}
+	destIp := "255.255.255.255"
+
+	if discover.GetCiaddr().String() != "0.0.0.0" {
+		destIp = discover.GetCiaddr().String()
+	}
+
+	raddr := net.UDPAddr{IP: net.ParseIP(destIp), Port: 68}
 	laddr, err := net.ResolveUDPAddr("udp", "192.168.12.1:6767")
 
 	conn, err := net.DialUDP("udp", laddr, &raddr)

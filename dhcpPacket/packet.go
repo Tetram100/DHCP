@@ -118,6 +118,10 @@ func (d *DhcpPacket) GetChaddr() (address net.HardwareAddr) {
 	address = d.chaddr[:]
 	return
 }
+func (d *DhcpPacket) GetCiaddr() (address net.IP) {
+	address = net.IPv4(d.ciaddr[0], d.ciaddr[1], d.ciaddr[2], d.ciaddr[3])
+	return
+}
 
 func (d *DhcpPacket) SetBroadcast(value bool) {
 	d.flags.SetBroadcast(value)
