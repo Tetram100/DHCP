@@ -152,6 +152,9 @@ func response(request *dhcpPacket.DhcpPacket) {
 			"UPDATE IP_table SET release_date=datetime(CURRENT_TIMESTAMP, '+3 minutes'), MAC = ? WHERE id = ?", mac_request.String(), row3.Id)
 	} else {
 		fmt.Println("All IPs are used")
+		packet_response.MessageType(6)
+		packet_response.SetYiaddr("0.0.0.0")
+		packet_response.SetSiaddr("0.0.0.0")
 	}
 	if err != nil {
 		fmt.Println("Failed to check the database")
@@ -178,7 +181,11 @@ func response(request *dhcpPacket.DhcpPacket) {
 		fmt.Println(err)
 	}
 
-	fmt.Println("Offer Send - Bytes written : ", n)
+	if packet_response.GetMessageType() == 5 {
+		fmt.Println("OFFER Sent - Bytes written : ", n)
+	} else {
+		fmt.Println("NACK Sent - Bytes written : ", n)
+	}
 	conn.Close()
 }
 
@@ -217,24 +224,25 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 	if err != nil {
 
 		if err == sql.ErrNoRows {
-			fmt.Println("He has wait too long and needs a dhcp discover")
-			return
+			packet_response.SetMessageType(6)
+			packet_response.SetYiaddr("0.0.0.0")
+			packet_response.SetSiaddr("0.0.0.0")
 		} else {
 			fmt.Println("Failed to check the database")
 			fmt.Println(err)
 		}
 
-	}
+	} else {
+		// We allocate the IP for allocation_time
+		packet_response.SetYiaddr(row.IP)
 
-	// We allocate the IP for allocation_time
-	packet_response.SetYiaddr(row.IP)
+		timeModifier := "+" + strconv.Itoa(allocation_time) + " seconds"
 
-	timeModifier := "+" + strconv.Itoa(allocation_time) + " seconds"
-
-	_, err = database.Exec(
-		"UPDATE IP_table SET release_date=datetime(CURRENT_TIMESTAMP, ?) WHERE id = ?", timeModifier, 1)
-	if err != nil {
-		fmt.Println(err)
+		_, err = database.Exec(
+			"UPDATE IP_table SET release_date=datetime(CURRENT_TIMESTAMP, ?) WHERE id = ?", timeModifier, 1)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 
 	packet_response.Options.Add(255, nil)
@@ -258,8 +266,35 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 		fmt.Println(err)
 	}
 
-	fmt.Println("ACK Send - Bytes written : ", n)
+	if packet_response.GetMessageType() == 5 {
+		fmt.Println("ACK Sent - Bytes written : ", n)
+	} else {
+		fmt.Println("NACK Sent - Bytes written : ", n)
+	}
 	conn.Close()
+}
+
+func release(discover *dhcpPacket.DhcpPacket) {
+	mac_request := discover.GetChaddr()
+
+	var row sqlRow
+	stmt, err := database.Prepare("SELECT * FROM IP_table WHERE MAC = ?")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = stmt.QueryRow(mac_request.String()).Scan(&row.Id, &row.IP, &row.MAC, &row.Release_date)
+	if err != nil {
+		fmt.Println("Illegal DHCPRELEASE")
+		return
+	} else {
+		_, err = database.Exec(
+			"UPDATE IP_table SET release_date=CURRENT_TIMESTAMP WHERE id = ?", 1)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
 }
 
 func main() {
@@ -279,10 +314,10 @@ func main() {
 		dhcpPacket.ParseDhcpPacket(data, pkg)
 		if pkg.GetMessageType() == 1 {
 			response(pkg)
-		}
-
-		if pkg.GetMessageType() == 3 {
+		} else if pkg.GetMessageType() == 3 {
 			ack(pkg)
+		} else if pkg.GetMessageType() == 7 {
+			release(pkg)
 		}
 	}
 
