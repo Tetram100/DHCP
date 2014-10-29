@@ -13,10 +13,6 @@ import (
 )
 
 var database *sql.DB
-var allocation_time int = 3600             // must be in second
-var Our_Network string = "192.168.12.0/24" // With CIDR notation
-var IP_server string = "192.168.12.1"
-var IP_DNS string = "8.8.8.8"
 
 type sqlRow struct {
 	Id           int
@@ -50,18 +46,18 @@ func initDB() {
 
 	_, err := database.Exec("DROP TABLE IF EXISTS IP_table")
 
-	_, err := database.Exec(
+	_, err = database.Exec(
 		"CREATE TABLE IP_table (id integer PRIMARY KEY, AddressIP varchar(255) NOT NULL, MAC varchar(255), release_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP);")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	IPs := create_ip(Our_Network)
+	IPs := create_ip(parameters.Our_Network)
 	// We delete the network and broadcast address
 	IPs = append(IPs[:0], IPs[1:]...)
 	IPs = append(IPs[:(len(IPs) - 1)])
 	for _, ip := range IPs {
-		if ip != IP_server {
+		if ip != parameters.IP_server {
 			_, err = database.Exec(
 				"INSERT INTO IP_table (id, AddressIP, MAC) VALUES (?, ?, ?)", nil, ip, "")
 		}
@@ -83,17 +79,17 @@ func response(request *dhcpPacket.DhcpPacket) {
 	// Partie fixe dans le corps
 	packet_response.SetOp(2)
 	packet_response.SetCiaddr("0.0.0.0")
-	packet_response.SetSiaddr(IP_server)
+	packet_response.SetSiaddr(parameters.IP_server)
 	packet_response.SetGiaddr("0.0.0.0")
 
 	// Partie fixe dans les options
 	// TODO - Récupérer à partir de la conf
 	packet_response.SetMessageType(2)
-	packet_response.SetDhcpServer(IP_server)
-	packet_response.SetLeaseTime(allocation_time)
+	packet_response.SetDhcpServer(parameters.IP_server)
+	packet_response.SetLeaseTime(parameters.Allocation_time)
 	packet_response.SetSubnetMask("255.255.255.0")
-	packet_response.SetDnsServer([]string{IP_DNS})
-	packet_response.SetRouter(IP_server)
+	packet_response.SetDnsServer([]string{parameters.IP_DNS})
+	packet_response.SetRouter(parameters.IP_server)
 
 	// Réponse particulières à la demande du client
 	packet_response.SetXid(request.GetXid())
@@ -152,7 +148,7 @@ func response(request *dhcpPacket.DhcpPacket) {
 			"UPDATE IP_table SET release_date=datetime(CURRENT_TIMESTAMP, '+3 minutes'), MAC = ? WHERE id = ?", mac_request.String(), row3.Id)
 	} else {
 		fmt.Println("All IPs are used")
-		packet_response.MessageType(6)
+		packet_response.SetMessageType(6)
 		packet_response.SetYiaddr("0.0.0.0")
 		packet_response.SetSiaddr("0.0.0.0")
 	}
@@ -196,17 +192,17 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 	// Partie fixe dans le corps
 	packet_response.SetOp(2)
 	packet_response.SetCiaddr("0.0.0.0")
-	packet_response.SetSiaddr(IP_server)
+	packet_response.SetSiaddr(parameters.IP_server)
 	packet_response.SetGiaddr("0.0.0.0")
 
 	// Partie fixe dans les options
 	// TODO - Récupérer à partir de la conf
 	packet_response.SetMessageType(5)
-	packet_response.SetDhcpServer(IP_server)
-	packet_response.SetLeaseTime(allocation_time)
+	packet_response.SetDhcpServer(parameters.IP_server)
+	packet_response.SetLeaseTime(parameters.Allocation_time)
 	packet_response.SetSubnetMask("255.255.255.0")
-	packet_response.SetDnsServer([]string{IP_DNS})
-	packet_response.SetRouter(IP_server)
+	packet_response.SetDnsServer([]string{parameters.IP_DNS})
+	packet_response.SetRouter(parameters.IP_server)
 
 	// Réponse particulières à la demande du client
 	packet_response.SetXid(discover.GetXid())
@@ -236,7 +232,7 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 		// We allocate the IP for allocation_time
 		packet_response.SetYiaddr(row.IP)
 
-		timeModifier := "+" + strconv.Itoa(allocation_time) + " seconds"
+		timeModifier := "+" + strconv.Itoa(parameters.Allocation_time) + " seconds"
 
 		_, err = database.Exec(
 			"UPDATE IP_table SET release_date=datetime(CURRENT_TIMESTAMP, ?) WHERE id = ?", timeModifier, 1)
@@ -300,6 +296,9 @@ func release(discover *dhcpPacket.DhcpPacket) {
 func main() {
 
 	var err error
+
+	// Chargement des paramètres
+	getParameters()
 
 	database, err = sql.Open("sqlite3", "mysqlite_3")
 	if err != nil {
