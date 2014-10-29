@@ -16,6 +16,7 @@ var database *sql.DB
 var allocation_time int = 3600             // must be in second
 var Our_Network string = "192.168.12.0/24" // With CIDR notation
 var IP_server string = "192.168.12.1"
+var IP_DNS string = "8.8.8.8"
 
 type sqlRow struct {
 	Id           int
@@ -47,13 +48,18 @@ func inc(ip net.IP) {
 
 func initDB() {
 
+	_, err := database.Exec("DROP TABLE IF EXISTS IP_table")
+
 	_, err := database.Exec(
-		"CREATE TABLE IF NOT EXISTS IP_table (id integer PRIMARY KEY, AddressIP varchar(255) NOT NULL, MAC varchar(255), release_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP);")
+		"CREATE TABLE IP_table (id integer PRIMARY KEY, AddressIP varchar(255) NOT NULL, MAC varchar(255), release_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP);")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	IPs := create_ip(Our_Network)
+	// We delete the network and broadcast address
+	IPs = append(IPs[:0], IPs[1:]...)
+	IPs = append(IPs[:(len(IPs) - 1)])
 	for _, ip := range IPs {
 		if ip != IP_server {
 			_, err = database.Exec(
@@ -84,10 +90,10 @@ func response(request *dhcpPacket.DhcpPacket) {
 	// TODO - Récupérer à partir de la conf
 	packet_response.SetMessageType(2)
 	packet_response.SetDhcpServer(IP_server)
-	packet_response.SetLeaseTime(43200)
+	packet_response.SetLeaseTime(allocation_time)
 	packet_response.SetSubnetMask("255.255.255.0")
-	packet_response.SetDnsServer([]string{"8.8.8.8"})
-	packet_response.SetRouter("192.168.12.1")
+	packet_response.SetDnsServer([]string{IP_DNS})
+	packet_response.SetRouter(IP_server)
 
 	// Réponse particulières à la demande du client
 	packet_response.SetXid(request.GetXid())
@@ -190,10 +196,10 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 	// TODO - Récupérer à partir de la conf
 	packet_response.SetMessageType(5)
 	packet_response.SetDhcpServer(IP_server)
-	packet_response.SetLeaseTime(43200)
+	packet_response.SetLeaseTime(allocation_time)
 	packet_response.SetSubnetMask("255.255.255.0")
-	packet_response.SetDnsServer([]string{"8.8.8.8"})
-	packet_response.SetRouter("192.168.12.1")
+	packet_response.SetDnsServer([]string{IP_DNS})
+	packet_response.SetRouter(IP_server)
 
 	// Réponse particulières à la demande du client
 	packet_response.SetXid(discover.GetXid())
