@@ -86,7 +86,7 @@ func response(request *dhcpPacket.DhcpPacket) {
 	// TODO - Récupérer à partir de la conf
 	packet_response.SetDhcpServer(parameters.IP_server)
 	packet_response.SetLeaseTime(parameters.Allocation_time)
-	packet_response.SetSubnetMask("255.255.255.0")
+	packet_response.SetSubnetMask(parameters.Netmask)
 	packet_response.SetDnsServer([]string{parameters.IP_DNS})
 	packet_response.SetRouter(parameters.IP_server)
 
@@ -200,7 +200,7 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 	// TODO - Récupérer à partir de la conf
 	packet_response.SetDhcpServer(parameters.IP_server)
 	packet_response.SetLeaseTime(parameters.Allocation_time)
-	packet_response.SetSubnetMask("255.255.255.0")
+	packet_response.SetSubnetMask(parameters.Netmask)
 	packet_response.SetDnsServer([]string{parameters.IP_DNS})
 	packet_response.SetRouter(parameters.IP_server)
 
