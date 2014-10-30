@@ -161,7 +161,7 @@ func response(request *dhcpPacket.DhcpPacket) {
 	// Sending the packet
 
 	raddr := net.UDPAddr{IP: net.ParseIP("255.255.255.255"), Port: 68}
-	laddr, err := net.ResolveUDPAddr("udp", ipServer+":"+out_port)
+	laddr, err := net.ResolveUDPAddr("udp", parameters.IP_server+":"+strconv.Itoa(parameters.OutPort))
 
 	conn, err := net.DialUDP("udp", laddr, &raddr)
 	if err != nil {
@@ -230,7 +230,7 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 		timeModifier := "+" + strconv.Itoa(parameters.Allocation_time) + " seconds"
 
 		_, err = database.Exec(
-			"UPDATE IP_table SET release_date=datetime(CURRENT_TIMESTAMP, ?) WHERE id = ?", timeModifier, 1)
+			"UPDATE IP_table SET release_date=datetime(CURRENT_TIMESTAMP, ?) WHERE id = ?", timeModifier, row.Id)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -247,7 +247,7 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 	}
 
 	raddr := net.UDPAddr{IP: net.ParseIP(destIp), Port: 68}
-	laddr, err := net.ResolveUDPAddr("udp", ipServer+":"+out_port)
+	laddr, err := net.ResolveUDPAddr("udp", parameters.IP_server+":"+strconv.Itoa(parameters.OutPort))
 
 	conn, err := net.DialUDP("udp", laddr, &raddr)
 	if err != nil {

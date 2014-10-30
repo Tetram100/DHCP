@@ -12,6 +12,7 @@ type Parameters struct {
 	IP_server       string `json:"ipServer"`
 	IP_DNS          string `json:"ipDns"`
 	Netmask         string `json:"netmask"`
+	OutPort         int    `json:"out_port"`
 }
 
 var parameters Parameters

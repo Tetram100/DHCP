@@ -2,7 +2,7 @@
     "allocationTime" : 3600,
     "ourNetwork" : "192.168.12.0/24",
     "ipServer" : "192.168.12.1",
-    "out_port" : "6767",
+    "out_port" : 6767,
     "ipDns" : "8.8.8.8",
     "netmask" : "255.255.255.0"
 }
