@@ -90,7 +90,7 @@ func (o *Options) parseAdd(buf *bytes.Buffer) (err error) {
 		return errors.New("End")
 	}
 
-	// On rajoute des zéros pour parse en uint16
+	// We add zeros to parse in uint16
 	codeRaw = append(codeRaw, byte(0x00))
 	lengthRaw = append(lengthRaw, byte(0x00))
 

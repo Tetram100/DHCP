@@ -170,14 +170,13 @@ func ParseDhcpPacket(b []byte, o *DhcpPacket) (err error) {
 	copy(o.sname[:], b[44:108])
 	copy(o.file[:], b[108:236])
 
-	// On saute le magic Cookie
+	// We skip the magic Cookie
 	o.Options = parseOptions(b[240:])
 
 	return
 
 }
 
-// Non testé
 func (d *DhcpPacket) SetMessageType(value int) {
 
 	valueRaw := intToBytes(uint32(value))
@@ -185,25 +184,21 @@ func (d *DhcpPacket) SetMessageType(value int) {
 	d.Options.Add(53, []byte{tmp})
 }
 
-// Non testé
 func (d *DhcpPacket) SetSubnetMask(value string) {
 	tmp := net.ParseIP(value)
 	d.Options.Add(1, tmp[12:])
 }
 
-// Non testé
 func (d *DhcpPacket) SetRouter(value string) {
 	tmp := net.ParseIP(value)
 	d.Options.Add(3, tmp[12:])
 }
 
-// Non testé
 func (d *DhcpPacket) SetDhcpServer(value string) {
 	tmp := net.ParseIP(value)
 	d.Options.Add(54, tmp[12:])
 }
 
-// Non testé
 func (d *DhcpPacket) SetDnsServer(value []string) {
 
 	var raw []byte
@@ -216,7 +211,6 @@ func (d *DhcpPacket) SetDnsServer(value []string) {
 	d.Options.Add(6, raw)
 }
 
-// Non testé
 func (d *DhcpPacket) SetLeaseTime(value int) {
 	tmp := intToBytesBG(uint32(value))
 	d.Options.Add(51, tmp)

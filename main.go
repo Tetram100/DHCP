@@ -76,21 +76,20 @@ func response(request *dhcpPacket.DhcpPacket) {
 
 	packet_response := dhcpPacket.NewDhcpPacket()
 
-	// Partie fixe dans le corps
+	// Fixed part in the body
 	packet_response.SetOp(2)
 	packet_response.SetCiaddr("0.0.0.0")
 	packet_response.SetSiaddr(parameters.IP_server)
 	packet_response.SetGiaddr("0.0.0.0")
 
-	// Partie fixe dans les options
-	// TODO - Récupérer à partir de la conf
+	// Fixed part in the options
 	packet_response.SetDhcpServer(parameters.IP_server)
 	packet_response.SetLeaseTime(parameters.Allocation_time)
 	packet_response.SetSubnetMask(parameters.Netmask)
 	packet_response.SetDnsServer([]string{parameters.IP_DNS})
 	packet_response.SetRouter(parameters.IP_server)
 
-	// Réponse particulières à la demande du client
+	// Specific response to the client request
 	packet_response.SetXid(request.GetXid())
 	mac_request := request.GetChaddr()
 	packet_response.SetChaddr(mac_request)
@@ -159,14 +158,10 @@ func response(request *dhcpPacket.DhcpPacket) {
 	packet_response.SetMessageType(2)
 	packet_response.Options.Add(255, nil)
 
-	// DEBUG ---
-	// packet_response.SetYiaddr("192.168.12.2")
-	// packet_response.Options.Add(255, nil)
-
-	// Envoi du packet
+	// Sending the packet
 
 	raddr := net.UDPAddr{IP: net.ParseIP("255.255.255.255"), Port: 68}
-	laddr, err := net.ResolveUDPAddr("udp", "192.168.12.1:6767")
+	laddr, err := net.ResolveUDPAddr("udp", ipServer+":"+out_port)
 
 	conn, err := net.DialUDP("udp", laddr, &raddr)
 	if err != nil {
@@ -190,21 +185,20 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 
 	packet_response := dhcpPacket.NewDhcpPacket()
 
-	// Partie fixe dans le corps
+	// Fixed part in the body
 	packet_response.SetOp(2)
 	packet_response.SetCiaddr("0.0.0.0")
 	packet_response.SetSiaddr(parameters.IP_server)
 	packet_response.SetGiaddr("0.0.0.0")
 
-	// Partie fixe dans les options
-	// TODO - Récupérer à partir de la conf
+	// Fixed part in the options
 	packet_response.SetDhcpServer(parameters.IP_server)
 	packet_response.SetLeaseTime(parameters.Allocation_time)
 	packet_response.SetSubnetMask(parameters.Netmask)
 	packet_response.SetDnsServer([]string{parameters.IP_DNS})
 	packet_response.SetRouter(parameters.IP_server)
 
-	// Réponse particulières à la demande du client
+	// Specific response to the client request
 	packet_response.SetXid(discover.GetXid())
 	mac_request := discover.GetChaddr()
 	packet_response.SetChaddr(mac_request)
@@ -244,11 +238,7 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 
 	packet_response.Options.Add(255, nil)
 
-	// DEBUG ---
-	// packet_response.SetYiaddr("192.168.12.2")
-	// packet_response.Options.Add(255, nil)
-
-	// Envoi du packet
+	// Sending the packet
 
 	destIp := "255.255.255.255"
 
@@ -257,7 +247,7 @@ func ack(discover *dhcpPacket.DhcpPacket) {
 	}
 
 	raddr := net.UDPAddr{IP: net.ParseIP(destIp), Port: 68}
-	laddr, err := net.ResolveUDPAddr("udp", "192.168.12.1:6767")
+	laddr, err := net.ResolveUDPAddr("udp", ipServer+":"+out_port)
 
 	conn, err := net.DialUDP("udp", laddr, &raddr)
 	if err != nil {
@@ -304,7 +294,7 @@ func main() {
 
 	var err error
 
-	// Chargement des paramètres
+	// Loading of the parameters
 	getParameters()
 
 	database, err = sql.Open("sqlite3", "mysqlite_3")
