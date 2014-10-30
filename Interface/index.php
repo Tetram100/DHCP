@@ -52,7 +52,7 @@
 		<h1>DHCP Project - Admin Page</h1>
 		<hr>
 		<input type="button" class="btn btn-primary" onclick="request('.$row[0].', 3);" value="Remove all the IP addresses"/>
-		<input class="btn btn-primary btn-success" data-toggle="modal" data-target="#newIP" value="Add IP addresses" />
+		<input class="btn btn-primary btn-success" data-toggle="modal" data-target="#newIP" value="Add IP address" />
 		<hr>
 		<table class="table table-striped" style="font-size: 16px;">
 			<thead>
@@ -91,15 +91,15 @@
 			<div class="modal-content">
 				<div class="modal-header">
 					<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-					<h4 class="modal-title" id="myModalLabel">Add a new network</h4>
+					<h4 class="modal-title" id="myModalLabel">Add a new address</h4>
 				</div>
 				<div class="modal-body">
-					<p>Write your network with the CIDR notation</p>
+					<p>Write the new IP address</p>
 					<input type="text" id="new_network" class="form-control" placeholder="Text input">
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-					<input type="button" class="btn btn-primary" onclick="newIP();" value="Add this network"/>
+					<input type="button" class="btn btn-primary" onclick="newIP();" value="Add this address"/>
 				</div>
 			</div>
 		</div>
